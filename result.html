@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Exam Result</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<style>
+  body{font-family:Inter,Arial,Helvetica,sans-serif;background:#f3f6fb;margin:0;padding:28px;color:#0f172a}
+  .wrap{max-width:720px;margin:0 auto}
+  .card{background:#fff;padding:20px;border-radius:12px;box-shadow:0 6px 18px rgba(11,20,40,0.06)}
+  h1{margin-top:0}
+  .score{font-size:28px;color:#059669;font-weight:700}
+  .meta{color:#334155;margin-top:8px}
+  .history{margin-top:18px}
+  .history-item{padding:10px;border-radius:8px;background:#fbfdff;border:1px solid #eef3f8;margin-bottom:8px}
+  button{padding:10px 12px;border-radius:10px;border:none;background:#1167b1;color:#fff;cursor:pointer;margin-right:8px}
+  .secondary{background:#eef3fb;color:#1167b1;border:1px solid #d6e7fb}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Exam Result</h1>
+      <div id="resultArea"></div>
+
+      <div style="margin-top:16px">
+        <button id="retake" type="button">Retake Exam</button>
+        <button id="backAdmin" class="secondary" type="button">Back to Admin</button>
+        <button id="clearHistory" class="secondary" type="button">Clear History</button>
+        <button id="logout" class="secondary" type="button">Logout</button>
+      </div>
+
+      <div class="history" id="historyList"></div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const lastKey = 'lastResult';
+  const historyKey = 'resultsHistory';
+  const resultArea = document.getElementById('resultArea');
+  const historyList = document.getElementById('historyList');
+
+  const role = localStorage.getItem("userRole");
+  const student = localStorage.getItem("loggedInUser");
+
+  // require login
+  if (!role || !student) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  // show latest result
+  function showResult(){
+    const raw = localStorage.getItem(lastKey);
+    if(!raw){
+      resultArea.innerHTML = '<p>No recent result found.</p>';
+      return;
+    }
+    const r = JSON.parse(raw);
+    const percent = Math.round((r.score / r.total) * 100);
+    const time = r.timestamp ? new Date(r.timestamp).toLocaleString() : '';
+    resultArea.innerHTML = `
+      <div class="score">${r.score} / ${r.total} (${percent}%)</div>
+      <div class="meta">
+        Student: <strong>${r.student || student}</strong><br>
+        Student ID: <strong>${r.studentId || localStorage.getItem('studentId') || 'N/A'}</strong><br>
+        Token: <strong>${r.token || localStorage.getItem('userToken') || 'N/A'}</strong><br>
+        Taken: ${time} — Time used: ${r.timeTaken}s
+      </div>
+    `;
+  }
+
+  // render history (admin only). Students are NOT shown history per request.
+  function renderHistory(){
+    historyList.innerHTML = '';
+    if (role !== 'admin') {
+      // hide history entirely for students
+      historyList.style.display = 'none';
+      document.getElementById('clearHistory').style.display = 'none';
+      document.getElementById('backAdmin').style.display = 'none'; // only admins see back
+      return;
+    }
+    // admin: show full history
+    const arr = JSON.parse(localStorage.getItem(historyKey) || '[]');
+    historyList.innerHTML = '<h3 style="margin-top:18px">History</h3>';
+    if (!arr.length) {
+      historyList.innerHTML += '<p class="meta">No history yet.</p>';
+      return;
+    }
+    arr.slice().reverse().forEach((h) => {
+      const div = document.createElement('div');
+      div.className = 'history-item';
+      div.innerHTML = `
+        <strong>${h.score}/${h.total}</strong> — ${Math.round(h.score/h.total*100)}%
+        <div class="meta">
+          Student: ${h.student} | Student ID: ${h.studentId} | Token: ${h.token}<br>
+          ${h.timestamp ? new Date(h.timestamp).toLocaleString() : ''} (time: ${h.timeTaken}s)
+        </div>
+      `;
+      historyList.appendChild(div);
+    });
+  }
+
+  // button handlers
+  document.getElementById('retake').addEventListener('click', () => {
+    // refresh token for a new session? optional — keep same token
+    window.location.href = 'exam.html';
+  });
+  document.getElementById('backAdmin').addEventListener('click', () => window.location.href = 'admin.html');
+  document.getElementById('clearHistory').addEventListener('click', () => {
+    if (!confirm('Clear all stored results history?')) return;
+    localStorage.removeItem(historyKey);
+    renderHistory();
+  });
+  document.getElementById('logout').addEventListener('click', () => {
+    localStorage.removeItem("loggedInUser");
+    localStorage.removeItem("userToken");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("studentId");
+    window.location.href = "login.html";
+  });
+
+
+  if (role !== 'admin') {
+    document.getElementById("backAdmin").style.display = "none";
+  }
+  
+
+  showResult();
+  renderHistory();
+})();
+</script>
+</body>
+</html>

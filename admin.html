@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>CBT Admin — Add Questions</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  :root{--primary:#1167b1;--muted:#6b7280;--card:#fff}
+  body{font-family:Inter,Arial,Helvetica,sans-serif;background:#f3f6fb;margin:0;padding:32px;color:#0f172a}
+  .container{max-width:820px;margin:0 auto}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  h1{margin:0;font-size:20px}
+  .card{background:var(--card);padding:18px;border-radius:12px;box-shadow:0 6px 18px rgba(11,20,40,0.06);margin-bottom:16px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  input,select,button,textarea{font-size:14px;padding:10px;border-radius:8px;border:1px solid #e6e9ef;box-sizing:border-box}
+  label{font-size:13px;color:var(--muted)}
+  .btn{background:var(--primary);color:#fff;border:none;cursor:pointer}
+  .btn.secondary{background:#eef3fb;color:var(--primary);border:1px solid #d6e7fb}
+  .small{font-size:13px;color:var(--muted)}
+  .questions-list{margin-top:12px}
+  .q-row{display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:8px;background:#fbfdff;border:1px solid #eef3f8;margin-bottom:8px}
+  .q-text{flex:1;margin-right:12px}
+  .actions button{margin-left:6px}
+  .note{font-size:13px;color:#334155;padding-top:8px}
+  @media (max-width:600px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>CBT Admin Panel</h1>
+      <div>
+        <button class="btn" id="gotoExam" type="button">Open Exam Results</button>
+      </div>
+    </header>
+
+    <section class="card">
+      <h2 style="margin-top:0">Add / Edit Question</h2>
+
+      <div class="grid">
+        <div>
+          <label class="small">Question</label>
+          <textarea id="question" rows="3" placeholder="Enter the question"></textarea>
+        </div>
+        <div>
+          <label class="small">Correct Option</label>
+          <select id="answer">
+            <option value="">Select correct answer</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="D">D</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid" style="margin-top:10px">
+        <div>
+          <label class="small">Option A</label>
+          <input id="optA" placeholder="Option A" />
+        </div>
+        <div>
+          <label class="small">Option B</label>
+          <input id="optB" placeholder="Option B" />
+        </div>
+
+        <div>
+          <label class="small">Option C</label>
+          <input id="optC" placeholder="Option C" />
+        </div>
+        <div>
+          <label class="small">Option D</label>
+          <input id="optD" placeholder="Option D" />
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn" id="saveBtn" type="button">Add Question</button>
+        <button class="btn secondary" id="clearForm" type="button">Clear</button>
+        <button class="btn secondary" id="clearAll" type="button">Delete All Questions</button>
+      </div>
+
+      <p class="note">Notes: Questions are stored in your browser (localStorage). They will persist until you clear them or clear your browser storage.</p>
+    </section>
+
+    <section class="card">
+      <h2 style="margin-top:0">Questions List</h2>
+      <div id="questionsList" class="questions-list"></div>
+    </section>
+  </div>
+
+<script>
+(() => {
+  const qKey = 'questions';
+
+  function getQuestions(){
+    return JSON.parse(localStorage.getItem(qKey) || '[]');
+  }
+  function saveQuestions(arr){ localStorage.setItem(qKey, JSON.stringify(arr)); }
+
+  const elements = {
+    question: document.getElementById('question'),
+    optA: document.getElementById('optA'),
+    optB: document.getElementById('optB'),
+    optC: document.getElementById('optC'),
+    optD: document.getElementById('optD'),
+    answer: document.getElementById('answer'),
+    saveBtn: document.getElementById('saveBtn'),
+    clearForm: document.getElementById('clearForm'),
+    clearAll: document.getElementById('clearAll'),
+    questionsList: document.getElementById('questionsList'),
+    gotoExam: document.getElementById('gotoExam')
+  };
+
+  let editingIndex = -1;
+
+  function renderList(){
+    const arr = getQuestions();
+    elements.questionsList.innerHTML = '';
+    if(arr.length === 0){
+      elements.questionsList.innerHTML = '<p class="small">No questions added yet.</p>';
+      elements.saveBtn.textContent = 'Add Question';
+      return;
+    }
+
+    arr.forEach((q, i) => {
+      const div = document.createElement('div');
+      div.className = 'q-row';
+      div.innerHTML = `
+        <div class="q-text">
+          <strong>Q${i+1}.</strong> ${escapeHtml(q.question)} <div class="small" style="margin-top:6px">A: ${escapeHtml(q.options.A)} &nbsp; B: ${escapeHtml(q.options.B)} &nbsp; C: ${escapeHtml(q.options.C)} &nbsp; D: ${escapeHtml(q.options.D)} — <em>Answer: ${q.answer}</em></div>
+        </div>
+        <div class="actions">
+          <button type="button" data-action="edit" data-index="${i}">Edit</button>
+          <button type="button" data-action="delete" data-index="${i}">Delete</button>
+        </div>
+      `;
+      elements.questionsList.appendChild(div);
+    });
+  }
+
+  function escapeHtml(s = '') {
+    return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+  }
+
+  elements.saveBtn.addEventListener('click', () => {
+    const q = elements.question.value.trim();
+    const A = elements.optA.value.trim();
+    const B = elements.optB.value.trim();
+    const C = elements.optC.value.trim();
+    const D = elements.optD.value.trim();
+    const answer = elements.answer.value;
+
+    if(!q || !A || !B || !C || !D || !answer){
+      alert('Please fill all fields.');
+      return;
+    }
+
+    const arr = getQuestions();
+    const item = { question: q, options: { A, B, C, D }, answer };
+
+    if(editingIndex >= 0){
+      arr[editingIndex] = item;
+      editingIndex = -1;
+      elements.saveBtn.textContent = 'Add Question';
+    } else {
+      arr.push(item);
+    }
+
+    saveQuestions(arr);
+    clearForm();
+    renderList();
+    alert('Saved.');
+  });
+
+  elements.questionsList.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    const action = btn.dataset.action;
+    const idx = Number(btn.dataset.index);
+    const arr = getQuestions();
+    if(action === 'delete'){
+      if(!confirm('Delete this question?')) return;
+      arr.splice(idx,1);
+      saveQuestions(arr);
+      renderList();
+    } else if(action === 'edit'){
+      const it = arr[idx];
+      elements.question.value = it.question;
+      elements.optA.value = it.options.A;
+      elements.optB.value = it.options.B;
+      elements.optC.value = it.options.C;
+      elements.optD.value = it.options.D;
+      elements.answer.value = it.answer;
+      editingIndex = idx;
+      elements.saveBtn.textContent = 'Save Changes';
+      window.scrollTo({top:0, behavior:'smooth'});
+    }
+  });
+
+  elements.clearForm.addEventListener('click', () => {
+    clearForm();
+  });
+
+  elements.clearAll.addEventListener('click', () => {
+    if(!confirm('Delete all saved questions from localStorage?')) return;
+    localStorage.removeItem(qKey);
+    renderList();
+  });
+
+  elements.gotoExam.addEventListener('click', () => {
+    window.location.href = 'result.html';
+  });
+
+  function clearForm(){
+    elements.question.value = '';
+    elements.optA.value = '';
+    elements.optB.value = '';
+    elements.optC.value = '';
+    elements.optD.value = '';
+    elements.answer.value = '';
+    editingIndex = -1;
+    elements.saveBtn.textContent = 'Add Question';
+  }
+
+  // initial render
+  renderList();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;background:#f1f5f9;margin:0;padding:40px;color:#0f172a}
+    .container{max-width:400px;margin:0 auto;background:#fff;padding:25px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.1)}
+    h1{text-align:center;margin-bottom:20px}
+    label{display:block;margin:12px 0 6px}
+    input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px}
+    button{width:100%;padding:12px;margin-top:18px;background:#1167b1;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer}
+    button:hover{background:#0e4f86}
+    .link{text-align:center;margin-top:14px}
+    .link a{text-decoration:none;color:#1167b1;font-weight:bold}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Login</h1>
+    <form id="loginForm">
+      <label for="role">Role</label>
+      <select id="role" required>
+        <option value="">-- Select Role --</option>
+        <option value="admin">Admin</option>
+        <option value="student">Student</option>
+      </select>
+
+      <label for="username">Username</label>
+      <input type="text" id="username" required />
+
+      <label for="password">Password</label>
+      <input type="password" id="password" required />
+
+      <button type="submit">Login</button>
+    </form>
+
+    <div class="link" id="createAccountLink" style="display:none;">
+      <a href="create-account.html">Create Student Account</a>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("role").addEventListener("change", function() {
+      // Only show create account link for students
+      document.getElementById("createAccountLink").style.display =
+        this.value === "student" ? "block" : "none";
+    });
+
+    document.getElementById("loginForm").addEventListener("submit", function(e){
+      e.preventDefault();
+      const role = document.getElementById("role").value;
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      if(role === "admin"){
+        // Simple admin check (you can improve later)
+        if(username === "admin" && password === "admin123"){
+          localStorage.setItem("loggedInUser", "admin");
+          localStorage.setItem("userRole", "admin");
+          window.location.href = "admin.html";
+        } else {
+          alert("Invalid admin credentials!");
+        }
+      }
+      else if(role === "student"){
+        const users = JSON.parse(localStorage.getItem("students") || "[]");
+        const user = users.find(u => u.username === username);
+
+        if(!user){
+          alert("No account found! Please create one first.");
+          return;
+        }
+        if(user.password !== password){
+          alert("Incorrect password!");
+          return;
+        }
+
+        // Save session
+        localStorage.setItem("loggedInUser", user.username);
+        localStorage.setItem("userRole", "student");
+        localStorage.setItem("studentId", user.id);
+
+        // Generate 10-digit random token
+        const token = Math.floor(1000000000 + Math.random() * 9000000000).toString();
+        localStorage.setItem("studentToken", token);
+
+        // Check if student already has result
+        const history = JSON.parse(localStorage.getItem("resultsHistory") || "[]");
+        const hasResult = history.some(r => r.student === user.username);
+
+        if(hasResult){
+          window.location.href = "result.html";
+        } else {
+          window.location.href = "exam.html";
+        }
+      }
+    });
+  </script>
+</body>
+</html>

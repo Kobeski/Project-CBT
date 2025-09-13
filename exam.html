@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>CBT Exam</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<style>
+  :root{--primary:#1167b1;--muted:#6b7280}
+  body{font-family:Arial,Helvetica,sans-serif;background:#f3f6fb;margin:0;padding:28px;color:#0f172a}
+  .wrap{max-width:920px;margin:0 auto}
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+  h1{margin:0;font-size:20px}
+  .card{background:#fff;padding:18px;border-radius:12px;box-shadow:0 6px 18px rgba(11,20,40,0.06);margin-bottom:16px}
+  .controls{display:flex;gap:8px;align-items:center}
+  .timer{font-weight:700;color:#b91c1c;padding-left:6px}
+  .q-block{padding:12px;border-radius:10px;background:#fbfdff;border:1px solid #eef3f8;margin-bottom:10px}
+  label{display:block;margin:6px 0}
+  button{padding:10px 12px;border-radius:10px;border:none;background:var(--primary);color:#fff;cursor:pointer}
+  button.secondary{background:#efefef;color:#111;border:1px solid #e6e9ef}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>CBT Exam</h1>
+      <div>
+        <button id="backAdmin" class="secondary" type="button">Back to Admin</button>
+      </div>
+    </header>
+
+    <section class="card">
+      <div class="meta">Instructions: You have <strong>1 minute</strong> to complete the exam. The test auto-submits when time runs out. Click Start to begin.</div>
+      <div class="controls" style="margin-bottom:12px">
+        <div>
+          <button id="startBtn" type="button">Start Exam</button>
+        </div>
+        <div style="margin-left:auto">
+          <span class="meta">Time Left</span>
+          <div class="timer" id="timerDisplay">--:--</div>
+        </div>
+      </div>
+
+      <div id="examFormContainer"></div>
+
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button id="submitBtn" type="button" style="display:none">Submit Exam</button>
+        <button id="clearAnswers" class="secondary" type="button">Clear Answers</button>
+      </div>
+    </section>
+  </div>
+
+<script>
+(() => {
+  const qKey = 'questions';
+  const lastKey = 'lastResult';
+  const historyKey = 'resultsHistory';
+  let timerInterval = null;
+  let timeLeft = 60; 
+  let examActive = false;
+  let currentQuestions = [];
+
+  const el = {
+    startBtn: document.getElementById('startBtn'),
+    submitBtn: document.getElementById('submitBtn'),
+    timerDisplay: document.getElementById('timerDisplay'),
+    examFormContainer: document.getElementById('examFormContainer'),
+    backAdmin: document.getElementById('backAdmin'),
+    clearAnswers: document.getElementById('clearAnswers')
+  };
+
+  // --- access control: only logged-in students ---
+  const loggedUser = localStorage.getItem('loggedInUser');
+  const role = localStorage.getItem('userRole');
+  if (!loggedUser || role !== 'student') {
+    window.location.href = 'login.html';
+    return;
+  }
+
+  // ensure studentId and token exist (fallback)
+  function genNum(len = 10) {
+    const min = Math.pow(10, len - 1);
+    return String(Math.floor(min + Math.random() * 9 * min));
+  }
+  if (!localStorage.getItem('studentId')) {
+    localStorage.setItem('studentId', genNum(8));
+  }
+  if (!localStorage.getItem('userToken')) {
+    localStorage.setItem('userToken', genNum(10));
+  }
+
+  function getQuestions(){ return JSON.parse(localStorage.getItem(qKey) || '[]'); }
+  function shuffle(a){
+    for(let i=a.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [a[i],a[j]]=[a[j],a[i]];
+    }
+    return a;
+  }
+
+  function formatTime(s){
+    const m = Math.floor(s/60), sec = s%60; return `${m}:${sec<10?'0':''}${sec}`;
+  }
+
+  function escapeHtml(s=''){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+
+  function renderQuestions(questions){
+    el.examFormContainer.innerHTML = '';
+    questions.forEach((q, idx) => {
+      const box = document.createElement('div');
+      box.className = 'q-block';
+      box.innerHTML = `
+        <div><strong>Q${idx+1}.</strong> ${escapeHtml(q.question)}</div>
+        <div style="margin-top:8px">
+          <label><input type="radio" name="q${idx}" value="A"> A. ${escapeHtml(q.options.A)}</label>
+          <label><input type="radio" name="q${idx}" value="B"> B. ${escapeHtml(q.options.B)}</label>
+          <label><input type="radio" name="q${idx}" value="C"> C. ${escapeHtml(q.options.C)}</label>
+          <label><input type="radio" name="q${idx}" value="D"> D. ${escapeHtml(q.options.D)}</label>
+        </div>
+      `;
+      el.examFormContainer.appendChild(box);
+    });
+  }
+
+  function startTimer(){
+    clearInterval(timerInterval);
+    timeLeft = 60;
+    el.timerDisplay.textContent = formatTime(timeLeft);
+    timerInterval = setInterval(()=> {
+      timeLeft--;
+      el.timerDisplay.textContent = formatTime(timeLeft);
+      if(timeLeft <= 0){
+        clearInterval(timerInterval);
+        if(examActive){
+          alert('Time is up — submitting the exam automatically.');
+          submitExam();
+        }
+      }
+    }, 1000);
+  }
+
+  function startExam(){
+    const q = getQuestions();
+    if(!q.length){
+      alert('No questions found. Please add questions first (open admin).');
+      return;
+    }
+    currentQuestions = shuffle([...q]); // use a shuffled copy
+    renderQuestions(currentQuestions);
+    examActive = true;
+    el.startBtn.disabled = true;
+    el.submitBtn.style.display = 'inline-block';
+    startTimer();
+  }
+
+  function submitExam(){
+    if(!examActive) return;
+
+    let score = 0;
+    currentQuestions.forEach((q, index) => {
+      const sel = document.querySelector(`input[name="q${index}"]:checked`);
+      if(sel && sel.value === q.answer) score++;
+    });
+
+    const student = localStorage.getItem('loggedInUser') || 'Unknown';
+    const studentId = localStorage.getItem('studentId') || '';
+    const token = localStorage.getItem('userToken') || '';
+
+    const result = {
+      student,
+      studentId,
+      token,
+      score,
+      total: currentQuestions.length,
+      timeTaken: 60 - timeLeft,
+      timestamp: new Date().toISOString()
+    };
+
+    // save latest
+    localStorage.setItem(lastKey, JSON.stringify(result));
+
+    // append to history (resultsHistory)
+    const hist = JSON.parse(localStorage.getItem(historyKey) || '[]');
+    hist.push(result);
+    localStorage.setItem(historyKey, JSON.stringify(hist));
+
+    // stop exam and redirect to result page
+    examActive = false;
+    clearInterval(timerInterval);
+    window.location.href = 'result.html';
+  }
+
+  function clearAnswers(){
+    if(!confirm('Clear all selected answers?')) return;
+    document.querySelectorAll('input[type="radio"]').forEach(i => i.checked = false);
+  }
+  // Hide "Back to Admin" if student
+window.addEventListener("DOMContentLoaded", () => {
+  const role = localStorage.getItem("userRole");
+  if(role === "student"){
+    const backBtn = document.getElementById("backAdmin");
+    if(backBtn) backBtn.style.display = "none";
+  }
+});
+
+  el.startBtn.addEventListener('click', startExam);
+  el.submitBtn.addEventListener('click', submitExam);
+  el.backAdmin.addEventListener('click', () => {
+    // admin only
+    window.location.href = 'admin.html';
+  });
+  el.clearAnswers.addEventListener('click', clearAnswers);
+
+  // initial
+  el.timerDisplay.textContent = formatTime(0);
+})();
+</script>
+</body>
+</html>
