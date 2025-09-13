@@ -103,7 +103,7 @@
       historyList.appendChild(div);
     });
   }
-
+  
   // button handlers
   document.getElementById('retake').addEventListener('click', () => {
     // refresh token for a new session? optional — keep same token
@@ -122,12 +122,6 @@
     localStorage.removeItem("studentId");
     window.location.href = "./index.html";
   });
-
-
-  // if (role !== 'admin') {
-  //   document.getElementById("retake").style.display = "none";
-  // }
-  
 
   showResult();
   renderHistory();
