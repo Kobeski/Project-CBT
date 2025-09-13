@@ -46,7 +46,7 @@
 
   // require login
   if (!role || !student) {
-    window.location.href = "./login.html";
+    window.location.href = "./index.html";
     return;
   }
 
@@ -79,6 +79,10 @@
       historyList.style.display = 'none';
       document.getElementById('clearHistory').style.display = 'none';
       document.getElementById('backAdmin').style.display = 'none'; // only admins see back
+      return;
+    }
+    if (role !== 'student') {
+      document.getElementById('retake').style.display = 'none'; 
       return;
     }
     // admin: show full history
@@ -118,7 +122,7 @@
     localStorage.removeItem("userToken");
     localStorage.removeItem("userRole");
     localStorage.removeItem("studentId");
-    window.location.href = "./login.html";
+    window.location.href = "./index.html";
   });
 
 
