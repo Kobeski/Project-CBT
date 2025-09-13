@@ -46,7 +46,7 @@
 
   // require login
   if (!role || !student) {
-    window.location.href = "login.html";
+    window.location.href = "./login.html";
     return;
   }
 
@@ -118,12 +118,12 @@
     localStorage.removeItem("userToken");
     localStorage.removeItem("userRole");
     localStorage.removeItem("studentId");
-    window.location.href = "login.html";
+    window.location.href = "./login.html";
   });
 
 
   if (role !== 'admin') {
-    document.getElementById("backAdmin").style.display = "none";
+    document.getElementById("retake").style.display = "none";
   }
   
 
