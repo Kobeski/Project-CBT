@@ -79,7 +79,7 @@
       historyList.style.display = 'none';
       document.getElementById('clearHistory').style.display = 'none';
       document.getElementById('backAdmin').style.display = 'none'; // only admins see back
-      document.getElementById('retake').style.display = 'none'; 
+      
       return;
     }
    
@@ -103,7 +103,7 @@
       historyList.appendChild(div);
     });
   }
-  
+
   // button handlers
   document.getElementById('retake').addEventListener('click', () => {
     // refresh token for a new session? optional — keep same token
@@ -122,6 +122,12 @@
     localStorage.removeItem("studentId");
     window.location.href = "./index.html";
   });
+
+
+  if (role !== 'student') {
+    document.getElementById("retake").style.display = "none";
+  }
+  
 
   showResult();
   renderHistory();
