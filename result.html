@@ -105,9 +105,9 @@
   // button handlers
   document.getElementById('retake').addEventListener('click', () => {
     // refresh token for a new session? optional — keep same token
-    window.location.href = 'exam.html';
+    window.location.href = './exam.html';
   });
-  document.getElementById('backAdmin').addEventListener('click', () => window.location.href = 'admin.html');
+  document.getElementById('backAdmin').addEventListener('click', () => window.location.href = './admin.html');
   document.getElementById('clearHistory').addEventListener('click', () => {
     if (!confirm('Clear all stored results history?')) return;
     localStorage.removeItem(historyKey);
