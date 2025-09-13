@@ -82,6 +82,14 @@
       
       return;
     }
+    if (role !== 'student') {
+   
+      
+      document.getElementById('retake').style.display = 'none';
+     
+      
+      return;
+    }
    
     // admin: show full history
     const arr = JSON.parse(localStorage.getItem(historyKey) || '[]');
@@ -124,9 +132,7 @@
   });
 
 
-  if (role !== 'student') {
-    document.getElementById("retake").style.display = "none";
-  }
+  
   
 
   showResult();
